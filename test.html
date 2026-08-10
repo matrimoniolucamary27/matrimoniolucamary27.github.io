@@ -82,23 +82,6 @@
             display: block;
         }
 
-        .page-number {
-            position: absolute;
-            bottom: 8px;
-            font-size: 11px;
-            color: #475569;
-            font-weight: 600;
-            background: rgba(255, 255, 255, 0.85);
-            padding: 1px 7px;
-            border-radius: 9999px;
-            pointer-events: none;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.15);
-            border: 1px solid rgba(226, 232, 240, 0.8);
-        }
-
-        .page-left .page-number { left: 12px; }
-        .page-right .page-number { right: 12px; }
-
         /* Custom Touch Overlay Zones for Mobile */
         .touch-zone-prev, .touch-zone-next {
             position: absolute;
@@ -463,11 +446,6 @@
 
                     contentDiv.appendChild(img);
 
-                    const pageNumSpan = document.createElement('span');
-                    pageNumSpan.className = 'page-number';
-                    pageNumSpan.textContent = pageNum;
-                    contentDiv.appendChild(pageNumSpan);
-
                     pageDiv.appendChild(contentDiv);
                     flipbookEl.appendChild(pageDiv);
 
@@ -485,12 +463,24 @@
                     minHeight: 180,
                     maxHeight: calcPageHeight,
                     maxShadowOpacity: 0.3,
-                    showCover: true,
+                    showCover: !isMobile,
                     mobileScrollSupport: true,
                     usePortrait: isMobile,
                     autoSize: false,
                     clickEventForward: true
                 });
+
+                // Forziamo la modalità 1 facciata su Mobile e 2 facciate (a libro) su Desktop
+                if (isMobile) {
+                    pageFlipApp.updateOrientation = function() {
+                        this.orientation = 'portrait';
+                    };
+                } else {
+                    pageFlipApp.updateOrientation = function() {
+                        this.orientation = 'landscape';
+                    };
+                }
+                pageFlipApp.updateOrientation();
 
                 pageFlipApp.loadFromHTML(document.querySelectorAll('.page'));
 
