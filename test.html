@@ -195,10 +195,16 @@
             <div class="w-20 h-20 bg-slate-800/80 text-indigo-400 rounded-2xl flex items-center justify-center text-3xl mb-4 border border-slate-700">
                 <i class="fa-solid fa-file-pdf"></i>
             </div>
-            <h2 class="text-xl font-bold text-white mb-2">Nessun PDF Caricato</h2>
-            <p class="text-sm text-slate-400 mb-6">Non è stato possibile caricare il PDF di default dalla repository oppure non hai ancora selezionato un file locale.</p>
+            <h2 class="text-xl font-bold text-white mb-2">Impossibile Caricare il PDF</h2>
+            <p id="empty-state-msg" class="text-sm text-slate-400 mb-6">Non è stato possibile caricare il file PDF specificato.</p>
+            
+            <div id="file-protocol-warning" class="hidden mb-6 p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl text-xs text-amber-200 text-left">
+                <p class="font-semibold mb-1"><i class="fa-solid fa-triangle-exclamation text-amber-400 mr-1"></i> Stai aprendo la pagina in locale (file://)</p>
+                <p>I browser bloccano il caricamento automatico dei file locali tramite JavaScript per sicurezza. Per testare il PDF locale usa il pulsante sottostante o avvia un server locale (es. Live Server su VS Code).</p>
+            </div>
+
             <label class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-xl cursor-pointer shadow-lg transition flex items-center gap-2">
-                <i class="fa-solid fa-upload"></i> Carica PDF dal Computer
+                <i class="fa-solid fa-upload"></i> Seleziona PDF dal Computer
                 <input type="file" id="empty-file-input" accept="application/pdf" class="hidden">
             </label>
         </div>
@@ -274,9 +280,9 @@
         /* 
          * CONFIGURAZIONE PER IL TUO SITO:
          * Sostituisci questo URL con il percorso relativo o assoluto del tuo file PDF presente nella repository.
-         * Esempio: './docs/mio-libro.pdf' oppure '/assets/catalogo.pdf'
+         * Esempio: './test.pdf' oppure '/assets/catalogo.pdf'
          */
-        const DEFAULT_PDF_URL = 'file://test.pdf';
+        const DEFAULT_PDF_URL = './test.pdf';
 
         // Stato dell'applicazione
         let pageFlipApp = null;
@@ -293,6 +299,8 @@
         const loadingPercent = document.getElementById('loading-percent');
         const loadingText = document.getElementById('loading-text');
         const emptyState = document.getElementById('empty-state');
+        const emptyStateMsg = document.getElementById('empty-state-msg');
+        const fileProtocolWarning = document.getElementById('file-protocol-warning');
         const docTitle = document.getElementById('doc-title');
         const docStatus = document.getElementById('doc-status');
         const pageInput = document.getElementById('page-input');
@@ -311,7 +319,6 @@
                     audioCtx.resume();
                 }
 
-                // Generatore di rumore rosa/bianco per simulare lo sfregamento della carta
                 const bufferSize = audioCtx.sampleRate * 0.15; // 150ms
                 const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
                 const data = buffer.getChannelData(0);
@@ -363,6 +370,7 @@
             try {
                 showLoading(true, "Apertura file PDF...", 10);
                 emptyState.classList.add('hidden');
+                fileProtocolWarning.classList.add('hidden');
                 flipbookEl.innerHTML = '';
                 thumbsContainer.innerHTML = '';
 
@@ -371,13 +379,29 @@
                     pageFlipApp = null;
                 }
 
-                // Inizializza il documento PDF via PDF.js
-                const loadingTask = pdfjsLib.getDocument(pdfDataSource);
+                let pdfDataToPass = pdfDataSource;
+
+                // Se l'input è una stringa (percorso o URL), scarichiamo direttamente tramite fetch in ArrayBuffer
+                // Questo risolve i problemi di risoluzione URL relativi nei Worker CDN su GitHub Pages
+                if (typeof pdfDataSource === 'string') {
+                    const resolvedUrl = new URL(pdfDataSource, window.location.href).href;
+                    updateLoadingProgress(20, `Scaricamento ${isFileName}...`);
+                    
+                    const response = await fetch(resolvedUrl);
+                    if (!response.ok) {
+                        throw new Error(`Impossibile trovare il file (HTTP ${response.status} ${response.statusText}). URL richiesto: ${resolvedUrl}`);
+                    }
+                    const arrayBuffer = await response.arrayBuffer();
+                    pdfDataToPass = { data: new Uint8Array(arrayBuffer) };
+                }
+
+                // Inizializza il documento PDF via PDF.js con i dati binari
+                const loadingTask = pdfjsLib.getDocument(pdfDataToPass);
                 
                 loadingTask.onProgress = function(progress) {
                     if (progress.total > 0) {
-                        const percent = Math.round((progress.loaded / progress.total) * 40);
-                        updateLoadingProgress(percent, "Download documento...");
+                        const percent = 20 + Math.round((progress.loaded / progress.total) * 25);
+                        updateLoadingProgress(percent, "Elaborazione documento...");
                     }
                 };
 
@@ -398,8 +422,6 @@
                 const pageHeight = Math.round(viewport.height);
 
                 // Rendering di ciascuna pagina in un elemento DOM
-                const pageElements = [];
-
                 for (let pageNum = 1; pageNum <= totalPagesCount; pageNum++) {
                     const percent = 45 + Math.round((pageNum / totalPagesCount) * 45);
                     updateLoadingProgress(percent, `Elaborazione pagina ${pageNum} di ${totalPagesCount}...`);
@@ -427,7 +449,6 @@
                     const contentDiv = document.createElement('div');
                     contentDiv.className = 'page-content';
 
-                    // Convertiamo il canvas renderizzato in un'immagine per performance ottimali
                     const img = document.createElement('img');
                     img.src = canvas.toDataURL('image/jpeg', 0.9);
                     img.style.width = '100%';
@@ -443,7 +464,6 @@
 
                     pageDiv.appendChild(contentDiv);
                     flipbookEl.appendChild(pageDiv);
-                    pageElements.push(pageDiv);
 
                     // Crea anche la miniatura nella barra laterale
                     createThumbnail(pageNum, canvas.toDataURL('image/jpeg', 0.4));
@@ -484,6 +504,14 @@
                 console.error("Errore caricamento PDF:", error);
                 showLoading(false);
                 emptyState.classList.remove('hidden');
+
+                if (window.location.protocol === 'file:') {
+                    fileProtocolWarning.classList.remove('hidden');
+                    emptyStateMsg.textContent = "Impossibile caricare il PDF da percorso relativo usando il protocollo locale file://.";
+                } else {
+                    emptyStateMsg.textContent = `${error.message || 'Errore di caricamento del file PDF'}`;
+                }
+
                 showToast("Errore durante il caricamento del PDF", "fa-solid fa-circle-exclamation text-rose-400");
             }
         }
@@ -581,7 +609,7 @@
                 const fileReader = new FileReader();
                 fileReader.onload = function() {
                     const typedarray = new Uint8Array(this.result);
-                    loadPDF(typedarray, file.name);
+                    loadPDF({ data: typedarray }, file.name);
                 };
                 fileReader.readAsArrayBuffer(file);
             } else {
@@ -617,14 +645,13 @@
         // Adaptability / Window Resize handler
         window.addEventListener('resize', () => {
             if (pageFlipApp) {
-                const isMobile = window.innerWidth < 768;
                 pageFlipApp.updateFromHtml(document.querySelectorAll('.page'));
             }
         });
 
         window.addEventListener('DOMContentLoaded', () => {
             // Tentativo di caricare il PDF di default dalla repository del sito
-            loadPDF(DEFAULT_PDF_URL, "Guida PDF Repository");
+            loadPDF(DEFAULT_PDF_URL, "test.pdf");
         });
     </script>
 </body>
