@@ -99,12 +99,12 @@
         .page-left .page-number { left: 12px; }
         .page-right .page-number { right: 12px; }
 
-        /* Custom Touch Overlay Zones for Mobile (prevent horizontal dragging shifts) */
+        /* Custom Touch Overlay Zones for Mobile */
         .touch-zone-prev, .touch-zone-next {
             position: absolute;
             top: 0;
             bottom: 0;
-            width: 20%;
+            width: 25%;
             z-index: 15;
             display: flex;
             align-items: center;
@@ -150,61 +150,58 @@
 <body class="h-screen w-screen flex flex-col justify-between overflow-hidden">
 
     <!-- Navbar / Header Controls -->
-    <header class="glass-panel h-16 px-4 md:px-6 flex items-center justify-between z-30 shadow-lg">
+    <header class="glass-panel h-16 px-2 sm:px-4 md:px-6 flex items-center justify-between z-30 shadow-lg gap-1 sm:gap-2">
         <!-- Logo & Document Name -->
-        <div class="flex items-center gap-3">
-            <div class="p-2 bg-indigo-600 rounded-lg text-white shadow-md">
-                <i class="fa-solid fa-book-open text-lg"></i>
+        <div class="flex items-center gap-2 sm:gap-3 shrink-0">
+            <div class="p-1.5 sm:p-2 bg-indigo-600 rounded-lg text-white shadow-md">
+                <i class="fa-solid fa-book-open text-base sm:text-lg"></i>
             </div>
-            <div>
-                <h1 id="doc-title" class="font-semibold text-sm md:text-base text-slate-100 truncate max-w-[180px] sm:max-w-xs md:max-w-md">
+            <div class="max-w-[100px] xs:max-w-[140px] sm:max-w-xs md:max-w-md">
+                <h1 id="doc-title" class="font-semibold text-xs sm:text-sm md:text-base text-slate-100 truncate">
                     Sfoglia Libro PDF
                 </h1>
-                <p id="doc-status" class="text-xs text-slate-400">Pronto per la lettura</p>
+                <p id="doc-status" class="text-[10px] sm:text-xs text-slate-400 truncate hidden xs:block">Pronto per la lettura</p>
             </div>
         </div>
 
         <!-- Navigation & Page Controls -->
-        <div class="flex items-center gap-1 sm:gap-2">
-            <button id="btn-first" title="Prima Pagina" class="p-2 text-slate-300 hover:text-white hover:bg-slate-700/50 rounded-lg transition">
-                <i class="fa-solid fa-backward-step"></i>
+        <div class="flex items-center gap-0.5 sm:gap-1">
+            <button id="btn-first" title="Prima Pagina" class="p-1.5 sm:p-2 text-slate-300 hover:text-white hover:bg-slate-700/50 rounded-lg transition">
+                <i class="fa-solid fa-backward-step text-xs sm:text-base"></i>
             </button>
-            <button id="btn-prev" title="Pagina Precedente" class="p-2 text-slate-300 hover:text-white hover:bg-slate-700/50 rounded-lg transition">
-                <i class="fa-solid fa-chevron-left"></i>
+            <button id="btn-prev" title="Pagina Precedente" class="p-1.5 sm:p-2 text-slate-300 hover:text-white hover:bg-slate-700/50 rounded-lg transition">
+                <i class="fa-solid fa-chevron-left text-xs sm:text-base"></i>
             </button>
 
             <!-- Page Counter Input -->
-            <div class="flex items-center gap-1 bg-slate-800/80 px-3 py-1 rounded-lg border border-slate-700 text-xs sm:text-sm">
-                <span>Pag.</span>
-                <input type="number" id="page-input" value="1" min="1" class="w-10 bg-slate-900 text-center text-indigo-400 font-bold rounded focus:outline-none focus:ring-1 focus:ring-indigo-500 py-0.5">
-                <span class="text-slate-400">di <span id="total-pages">0</span></span>
+            <div class="flex items-center gap-0.5 sm:gap-1 bg-slate-800/80 px-1.5 sm:px-3 py-1 rounded-lg border border-slate-700 text-[11px] sm:text-sm">
+                <span class="hidden sm:inline">Pag.</span>
+                <input type="number" id="page-input" value="1" min="1" class="w-8 sm:w-10 bg-slate-900 text-center text-indigo-400 font-bold rounded focus:outline-none focus:ring-1 focus:ring-indigo-500 py-0.5 text-xs sm:text-sm">
+                <span class="text-slate-400"><span class="hidden sm:inline">di</span><span class="sm:hidden">/</span><span id="total-pages">0</span></span>
             </div>
 
-            <button id="btn-next" title="Pagina Successiva" class="p-2 text-slate-300 hover:text-white hover:bg-slate-700/50 rounded-lg transition">
-                <i class="fa-solid fa-chevron-right"></i>
+            <button id="btn-next" title="Pagina Successiva" class="p-1.5 sm:p-2 text-slate-300 hover:text-white hover:bg-slate-700/50 rounded-lg transition">
+                <i class="fa-solid fa-chevron-right text-xs sm:text-base"></i>
             </button>
-            <button id="btn-last" title="Ultima Pagina" class="p-2 text-slate-300 hover:text-white hover:bg-slate-700/50 rounded-lg transition">
-                <i class="fa-solid fa-forward-step"></i>
+            <button id="btn-last" title="Ultima Pagina" class="p-1.5 sm:p-2 text-slate-300 hover:text-white hover:bg-slate-700/50 rounded-lg transition">
+                <i class="fa-solid fa-forward-step text-xs sm:text-base"></i>
             </button>
         </div>
 
-        <!-- Secondary Actions (Sound, Thumbnails, Repo Guide, Fullscreen) -->
-        <div class="flex items-center gap-1 sm:gap-2">
-            <button id="btn-sound" title="Suono Sfoglio ON/OFF" class="p-2 text-indigo-400 hover:bg-slate-700/50 rounded-lg transition">
-        <!-- Secondary Actions (Thumbnails, Repo Guide, Fullscreen) -->
-        <div class="flex items-center gap-1 sm:gap-2">
-            <button id="btn-thumbs" title="Mostra Miniature" class="p-2 text-slate-300 hover:text-white hover:bg-slate-700/50 rounded-lg transition">
-                <i class="fa-solid fa-border-all"></i>
+        <!-- Secondary Actions (Thumbnails, Config, Upload, Fullscreen) -->
+        <div class="flex items-center gap-0.5 sm:gap-1.5">
+            <button id="btn-thumbs" title="Mostra Miniature" class="p-1.5 sm:p-2 text-slate-300 hover:text-white hover:bg-slate-700/50 rounded-lg transition">
+                <i class="fa-solid fa-border-all text-xs sm:text-base"></i>
             </button>
-            <button id="btn-config" title="Guida Repository / Configurazione" class="p-2 text-slate-300 hover:text-white hover:bg-slate-700/50 rounded-lg transition">
-                <i class="fa-solid fa-gear"></i>
+            <button id="btn-config" title="Guida Repository / Configurazione" class="p-1.5 sm:p-2 text-slate-300 hover:text-white hover:bg-slate-700/50 rounded-lg transition hidden sm:inline-flex">
+                <i class="fa-solid fa-gear text-xs sm:text-base"></i>
             </button>
-            <label id="btn-upload-label" title="Carica PDF locale per test" class="p-2 text-slate-300 hover:text-white hover:bg-slate-700/50 rounded-lg transition cursor-pointer">
-                <i class="fa-solid fa-file-upload"></i>
+            <label id="btn-upload-label" title="Carica PDF locale per test" class="p-1.5 sm:p-2 text-slate-300 hover:text-white hover:bg-slate-700/50 rounded-lg transition cursor-pointer">
+                <i class="fa-solid fa-file-upload text-xs sm:text-base"></i>
                 <input type="file" id="file-input" accept="application/pdf" class="hidden">
             </label>
-            <button id="btn-fullscreen" title="Schermo Intero" class="p-2 text-slate-300 hover:text-white hover:bg-slate-700/50 rounded-lg transition">
-                <i class="fa-solid fa-expand"></i>
+            <button id="btn-fullscreen" title="Schermo Intero" class="p-1.5 sm:p-2 text-slate-300 hover:text-white hover:bg-slate-700/50 rounded-lg transition hidden xs:inline-flex">
+                <i class="fa-solid fa-expand text-xs sm:text-base"></i>
             </button>
         </div>
     </header>
@@ -257,7 +254,7 @@
     </main>
 
     <!-- Drawer / Sidebar per le Miniature -->
-    <aside id="thumbs-drawer" class="fixed top-16 right-0 bottom-0 w-80 glass-panel z-20 transform translate-x-full transition-transform duration-300 ease-in-out flex flex-col shadow-2xl border-l border-slate-700/50">
+    <aside id="thumbs-drawer" class="fixed top-16 right-0 bottom-0 w-full max-w-xs sm:w-80 glass-panel z-20 transform translate-x-full transition-transform duration-300 ease-in-out flex flex-col shadow-2xl border-l border-slate-700/50">
         <div class="p-4 border-b border-slate-700/60 flex items-center justify-between">
             <div class="flex items-center gap-2">
                 <i class="fa-solid fa-images text-indigo-400"></i>
@@ -322,18 +319,14 @@
         // Configurazione PDF.js Worker
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-        /* 
-         * CONFIGURAZIONE PER IL TUO SITO:
-         * Sostituisci questo URL con il percorso relativo o assoluto del tuo file PDF presente nella repository.
-         * Esempio: './test.pdf' oppure '/assets/catalogo.pdf'
-         */
         const DEFAULT_PDF_URL = './test.pdf';
 
         // Stato dell'applicazione
         let pageFlipApp = null;
         let pdfDoc = null;
         let totalPagesCount = 0;
-        let isRendering = false;
+        let currentPdfSource = null;
+        let currentPdfName = "Documento.pdf";
 
         // Elementi DOM
         const flipbookEl = document.getElementById('flipbook');
@@ -370,8 +363,12 @@
 
         async function loadPDF(pdfDataSource, isFileName = "Documento.pdf") {
             try {
+                currentPdfSource = pdfDataSource;
+                currentPdfName = isFileName;
+
                 showLoading(true, "Apertura file PDF...", 10);
                 emptyState.classList.add('hidden');
+                emptyState.classList.remove('flex');
                 fileProtocolWarning.classList.add('hidden');
                 flipbookEl.innerHTML = '';
                 thumbsContainer.innerHTML = '';
@@ -383,21 +380,18 @@
 
                 let pdfDataToPass = pdfDataSource;
 
-                // Se l'input è una stringa (percorso o URL), scarichiamo direttamente tramite fetch in ArrayBuffer
-                // Questo risolve i problemi di risoluzione URL relativi nei Worker CDN su GitHub Pages
                 if (typeof pdfDataSource === 'string') {
                     const resolvedUrl = new URL(pdfDataSource, window.location.href).href;
                     updateLoadingProgress(20, `Scaricamento ${isFileName}...`);
                     
                     const response = await fetch(resolvedUrl);
                     if (!response.ok) {
-                        throw new Error(`Impossibile trovare il file (HTTP ${response.status} ${response.statusText}). URL richiesto: ${resolvedUrl}`);
+                        throw new Error(`Impossibile trovare il file (HTTP ${response.status} ${response.statusText}).`);
                     }
                     const arrayBuffer = await response.arrayBuffer();
                     pdfDataToPass = { data: new Uint8Array(arrayBuffer) };
                 }
 
-                // Inizializza il documento PDF via PDF.js con i dati binari
                 const loadingTask = pdfjsLib.getDocument(pdfDataToPass);
                 
                 loadingTask.onProgress = function(progress) {
@@ -417,23 +411,20 @@
 
                 updateLoadingProgress(45, "Generazione pagine libro...");
 
-                // Determinazione dimensioni base e rapporto d'aspetto (Aspect Ratio) reale del PDF
                 const firstPage = await pdfDoc.getPage(1);
                 const rawViewport = firstPage.getViewport({ scale: 1.0 });
                 const pageRatio = rawViewport.width / rawViewport.height;
 
-                // Calcolo preciso dello spazio disponibile per evitare qualsiasi taglio sopra/sotto o lati
                 const isMobile = window.innerWidth < 768;
                 const headerHeight = 64;
-                const paddingV = isMobile ? 12 : 32;
-                const paddingH = isMobile ? 12 : 48;
+                const paddingV = isMobile ? 16 : 32;
+                const paddingH = isMobile ? 16 : 48;
 
-                const maxAvailHeight = Math.max(250, window.innerHeight - headerHeight - paddingV);
+                const maxAvailHeight = Math.max(200, window.innerHeight - headerHeight - paddingV);
                 const maxAvailWidthPerPage = isMobile 
-                    ? Math.max(200, window.innerWidth - paddingH)
-                    : Math.max(200, (window.innerWidth - paddingH) / 2);
+                    ? Math.max(160, window.innerWidth - paddingH)
+                    : Math.max(160, (window.innerWidth - paddingH) / 2);
 
-                // Calcola le dimensioni ottimali senza sforare né in altezza né in larghezza
                 let calcPageWidth = maxAvailWidthPerPage;
                 let calcPageHeight = Math.round(calcPageWidth / pageRatio);
 
@@ -442,15 +433,13 @@
                     calcPageWidth = Math.round(calcPageHeight * pageRatio);
                 }
 
-                // Rendering di ciascuna pagina in un elemento DOM
                 for (let pageNum = 1; pageNum <= totalPagesCount; pageNum++) {
                     const percent = 45 + Math.round((pageNum / totalPagesCount) * 45);
                     updateLoadingProgress(percent, `Elaborazione pagina ${pageNum} di ${totalPagesCount}...`);
 
                     const page = await pdfDoc.getPage(pageNum);
                     
-                    // Risoluzione elevata per nitidezza perfetta del testo
-                    const renderScale = 2.0;
+                    const renderScale = isMobile ? 1.5 : 2.0;
                     const pageViewport = page.getViewport({ scale: renderScale });
 
                     const canvas = document.createElement('canvas');
@@ -463,7 +452,6 @@
                         viewport: pageViewport
                     }).promise;
 
-                    // Contenitore Pagina Flipbook
                     const pageDiv = document.createElement('div');
                     pageDiv.className = `page ${pageNum % 2 === 0 ? 'page-left' : 'page-right'}`;
 
@@ -471,7 +459,7 @@
                     contentDiv.className = 'page-content';
 
                     const img = document.createElement('img');
-                    img.src = canvas.toDataURL('image/jpeg', 0.92);
+                    img.src = canvas.toDataURL('image/jpeg', 0.88);
 
                     contentDiv.appendChild(img);
 
@@ -483,32 +471,29 @@
                     pageDiv.appendChild(contentDiv);
                     flipbookEl.appendChild(pageDiv);
 
-                    // Crea anche la miniatura nella barra laterale
-                    createThumbnail(pageNum, canvas.toDataURL('image/jpeg', 0.4));
+                    createThumbnail(pageNum, canvas.toDataURL('image/jpeg', 0.35));
                 }
 
                 updateLoadingProgress(95, "Inizializzazione effetto sfoglio...");
 
-                // Configura StPageFlip con limiti rigidi che non superano lo schermo
                 pageFlipApp = new St.PageFlip(flipbookEl, {
                     width: calcPageWidth,
                     height: calcPageHeight,
-                    size: "stretch",
-                    minWidth: 160,
+                    size: "fixed",
+                    minWidth: 140,
                     maxWidth: calcPageWidth,
-                    minHeight: 220,
+                    minHeight: 180,
                     maxHeight: calcPageHeight,
                     maxShadowOpacity: 0.3,
                     showCover: true,
-                    mobileScrollSupport: false,
+                    mobileScrollSupport: true,
                     usePortrait: isMobile,
-                    autoSize: true,
+                    autoSize: false,
                     clickEventForward: true
                 });
 
                 pageFlipApp.loadFromHTML(document.querySelectorAll('.page'));
 
-                // Event listener cambio pagina StPageFlip
                 pageFlipApp.on('flip', (e) => {
                     const currentPage = e.data + 1;
                     pageInput.value = currentPage;
@@ -522,6 +507,7 @@
                 console.error("Errore caricamento PDF:", error);
                 showLoading(false);
                 emptyState.classList.remove('hidden');
+                emptyState.classList.add('flex');
 
                 if (window.location.protocol === 'file:') {
                     fileProtocolWarning.classList.remove('hidden');
@@ -567,7 +553,6 @@
             }
         }
 
-        // Helper caricamento
         function showLoading(show, text = "", percent = 0) {
             if (show) {
                 loadingOverlay.classList.remove('opacity-0', 'pointer-events-none');
@@ -583,22 +568,23 @@
             loadingPercent.textContent = `${percent}%`;
         }
 
-        // Pulsanti di Navigazione Principali e Zone Tattili Mobile
+        // Pulsanti Navigation & Touch Mobile
         document.getElementById('btn-prev').addEventListener('click', () => pageFlipApp?.flipPrev());
         document.getElementById('btn-next').addEventListener('click', () => pageFlipApp?.flipNext());
         document.getElementById('btn-first').addEventListener('click', () => pageFlipApp?.turnToPage(0));
         document.getElementById('btn-last').addEventListener('click', () => pageFlipApp?.turnToPage(totalPagesCount - 1));
 
         document.getElementById('touch-prev').addEventListener('click', (e) => {
+            e.preventDefault();
             e.stopPropagation();
             pageFlipApp?.flipPrev();
         });
         document.getElementById('touch-next').addEventListener('click', (e) => {
+            e.preventDefault();
             e.stopPropagation();
             pageFlipApp?.flipNext();
         });
 
-        // Input diretto del numero pagina
         pageInput.addEventListener('change', (e) => {
             let val = parseInt(e.target.value);
             if (isNaN(val)) val = 1;
@@ -618,14 +604,6 @@
         document.getElementById('btn-config').addEventListener('click', () => configModal.classList.remove('hidden'));
         document.getElementById('btn-close-config').addEventListener('click', () => configModal.classList.add('hidden'));
         document.getElementById('btn-understand').addEventListener('click', () => configModal.classList.add('hidden'));
-
-        // Blocco assoluto dello scorrimento nativo e dei gesti di trascinamento del layout
-        document.addEventListener('touchmove', (e) => {
-            if (e.target.closest('#thumbs-drawer') || e.target.closest('#config-modal')) {
-                return; // Consente lo scroll nella barra delle miniature o modale
-            }
-            e.preventDefault();
-        }, { passive: false });
 
         // Gestione Caricamento File Locale (Test)
         function handleFileInput(e) {
@@ -658,7 +636,7 @@
             }
         });
 
-        // Tasti di scorciatoia da tastiera
+        // Scorciatoie tastiera
         window.addEventListener('keydown', (e) => {
             if (e.target.tagName === 'INPUT') return;
             if (e.key === 'ArrowLeft') pageFlipApp?.flipPrev();
@@ -667,15 +645,18 @@
             if (e.key === 'End') pageFlipApp?.turnToPage(totalPagesCount - 1);
         });
 
-        // Adaptability / Window Resize handler
+        // Adaptability & Orientation Change Handler per Mobile
+        let resizeTimeout;
         window.addEventListener('resize', () => {
-            if (pageFlipApp) {
-                pageFlipApp.updateFromHtml(document.querySelectorAll('.page'));
-            }
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                if (currentPdfSource) {
+                    loadPDF(currentPdfSource, currentPdfName);
+                }
+            }, 300);
         });
 
         window.addEventListener('DOMContentLoaded', () => {
-            // Tentativo di caricare il PDF di default dalla repository del sito
             loadPDF(DEFAULT_PDF_URL, "test.pdf");
         });
     </script>
