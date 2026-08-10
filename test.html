@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Flipbook Interactive Reader</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- PDF.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    
+    <!-- PageFlip JS CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
+            color: #f8fafc;
+            user-select: none;
+            overflow-x: hidden;
+        }
+
+        /* Container StPageFlip custom fixes */
+        .flipbook-viewport {
+            width: 100%;
+            height: calc(100vh - 80px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        .flipbook-container {
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+            transition: transform 0.3s ease;
+        }
+
+        /* Page styling inside flipbook */
+        .page {
+            background-color: #ffffff;
+            overflow: hidden;
+            box-sizing: border-box;
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.1);
+        }
+
+        .page-content {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        .page-content canvas {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        .page-number {
+            position: absolute;
+            bottom: 8px;
+            font-size: 11px;
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        .page-left .page-number { left: 15px; }
+        .page-right .page-number { right: 15px; }
+
+        /* Custom Scrollbar for Drawer */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+        }
+
+        /* Glassmorphism effects */
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.75);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Page Turn Animation effect shadows */
+        .--stpf-shadow {
+            box-shadow: 0 0 20px rgba(0,0,0,0.4);
+        }
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col justify-between overflow-hidden">
+
+    <!-- Navbar / Header Controls -->
+    <header class="glass-panel h-16 px-4 md:px-6 flex items-center justify-between z-30 shadow-lg">
+        <!-- Logo & Document Name -->
+        <div class="flex items-center gap-3">
+            <div class="p-2 bg-indigo-600 rounded-lg text-white shadow-md">
+                <i class="fa-solid fa-book-open text-lg"></i>
+            </div>
+            <div>
+                <h1 id="doc-title" class="font-semibold text-sm md:text-base text-slate-100 truncate max-w-[180px] sm:max-w-xs md:max-w-md">
+                    Sfoglia Libro PDF
+                </h1>
+                <p id="doc-status" class="text-xs text-slate-400">Pronto per la lettura</p>
+            </div>
+        </div>
+
+        <!-- Navigation & Page Controls -->
+        <div class="flex items-center gap-1 sm:gap-2">
+            <button id="btn-first" title="Prima Pagina" class="p-2 text-slate-300 hover:text-white hover:bg-slate-700/50 rounded-lg transition">
+                <i class="fa-solid fa-backward-step"></i>
+            </button>
+            <button id="btn-prev" title="Pagina Precedente" class="p-2 text-slate-300 hover:text-white hover:bg-slate-700/50 rounded-lg transition">
+                <i class="fa-solid fa-chevron-left"></i>
+            </button>
+
+            <!-- Page Counter Input -->
+            <div class="flex items-center gap-1 bg-slate-800/80 px-3 py-1 rounded-lg border border-slate-700 text-xs sm:text-sm">
+                <span>Pag.</span>
+                <input type="number" id="page-input" value="1" min="1" class="w-10 bg-slate-900 text-center text-indigo-400 font-bold rounded focus:outline-none focus:ring-1 focus:ring-indigo-500 py-0.5">
+                <span class="text-slate-400">di <span id="total-pages">0</span></span>
+            </div>
+
+            <button id="btn-next" title="Pagina Successiva" class="p-2 text-slate-300 hover:text-white hover:bg-slate-700/50 rounded-lg transition">
+                <i class="fa-solid fa-chevron-right"></i>
+            </button>
+            <button id="btn-last" title="Ultima Pagina" class="p-2 text-slate-300 hover:text-white hover:bg-slate-700/50 rounded-lg transition">
+                <i class="fa-solid fa-forward-step"></i>
+            </button>
+        </div>
+
+        <!-- Secondary Actions (Sound, Thumbnails, Repo Guide, Fullscreen) -->
+        <div class="flex items-center gap-1 sm:gap-2">
+            <button id="btn-sound" title="Suono Sfoglio ON/OFF" class="p-2 text-indigo-400 hover:bg-slate-700/50 rounded-lg transition">
+                <i class="fa-solid fa-volume-high"></i>
+            </button>
+            <button id="btn-thumbs" title="Mostra Miniature" class="p-2 text-slate-300 hover:text-white hover:bg-slate-700/50 rounded-lg transition">
+                <i class="fa-solid fa-border-all"></i>
+            </button>
+            <button id="btn-config" title="Guida Repository / Configurazione" class="p-2 text-slate-300 hover:text-white hover:bg-slate-700/50 rounded-lg transition">
+                <i class="fa-solid fa-gear"></i>
+            </button>
+            <label id="btn-upload-label" title="Carica PDF locale per test" class="p-2 text-slate-300 hover:text-white hover:bg-slate-700/50 rounded-lg transition cursor-pointer">
+                <i class="fa-solid fa-file-upload"></i>
+                <input type="file" id="file-input" accept="application/pdf" class="hidden">
+            </label>
+            <button id="btn-fullscreen" title="Schermo Intero" class="p-2 text-slate-300 hover:text-white hover:bg-slate-700/50 rounded-lg transition">
+                <i class="fa-solid fa-expand"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="relative flex-1 w-full flex items-center justify-center overflow-hidden">
+
+        <!-- Loading Overlay -->
+        <div id="loading-overlay" class="absolute inset-0 bg-slate-950/80 backdrop-blur-md z-40 flex flex-col items-center justify-center transition-opacity duration-300">
+            <div class="relative w-20 h-20 mb-4">
+                <div class="absolute inset-0 border-4 border-indigo-500/20 rounded-full"></div>
+                <div class="absolute inset-0 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+                <i class="fa-solid fa-book-open absolute inset-0 flex items-center justify-center text-indigo-400 text-xl"></i>
+            </div>
+            <p id="loading-text" class="text-sm font-medium text-slate-200 mb-2">Caricamento PDF in corso...</p>
+            <div class="w-64 bg-slate-800 rounded-full h-2 overflow-hidden border border-slate-700">
+                <div id="loading-bar" class="bg-indigo-500 h-full w-0 transition-all duration-200"></div>
+            </div>
+            <p id="loading-percent" class="text-xs text-slate-400 mt-2">0%</p>
+        </div>
+
+        <!-- Flipbook Area -->
+        <div class="flipbook-viewport" id="viewport">
+            <div id="flipbook" class="flipbook-container"></div>
+        </div>
+
+        <!-- Empty State / Welcome Screen if no PDF loaded -->
+        <div id="empty-state" class="hidden flex-col items-center justify-center text-center p-6 max-w-md">
+            <div class="w-20 h-20 bg-slate-800/80 text-indigo-400 rounded-2xl flex items-center justify-center text-3xl mb-4 border border-slate-700">
+                <i class="fa-solid fa-file-pdf"></i>
+            </div>
+            <h2 class="text-xl font-bold text-white mb-2">Nessun PDF Caricato</h2>
+            <p class="text-sm text-slate-400 mb-6">Non è stato possibile caricare il PDF di default dalla repository oppure non hai ancora selezionato un file locale.</p>
+            <label class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-xl cursor-pointer shadow-lg transition flex items-center gap-2">
+                <i class="fa-solid fa-upload"></i> Carica PDF dal Computer
+                <input type="file" id="empty-file-input" accept="application/pdf" class="hidden">
+            </label>
+        </div>
+
+    </main>
+
+    <!-- Drawer / Sidebar per le Miniature -->
+    <aside id="thumbs-drawer" class="fixed top-16 right-0 bottom-0 w-80 glass-panel z-20 transform translate-x-full transition-transform duration-300 ease-in-out flex flex-col shadow-2xl border-l border-slate-700/50">
+        <div class="p-4 border-b border-slate-700/60 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <i class="fa-solid fa-images text-indigo-400"></i>
+                <h3 class="font-semibold text-sm text-white">Indice Pagine</h3>
+            </div>
+            <button id="btn-close-thumbs" class="text-slate-400 hover:text-white p-1 rounded">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+        </div>
+        <div id="thumbs-container" class="flex-1 overflow-y-auto p-4 grid grid-cols-2 gap-3">
+            <!-- Dynamic Thumbnail Cards go here -->
+        </div>
+    </aside>
+
+    <!-- Modal Guida Repository -->
+    <div id="config-modal" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-xl w-full p-6 shadow-2xl relative text-left">
+            <button id="btn-close-config" class="absolute top-4 right-4 text-slate-400 hover:text-white p-2">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+            <div class="flex items-center gap-3 mb-4">
+                <div class="p-3 bg-indigo-600/20 text-indigo-400 rounded-xl border border-indigo-500/30">
+                    <i class="fa-solid fa-code text-xl"></i>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold text-white">Come collegare il tuo PDF</h3>
+                    <p class="text-xs text-slate-400">Istruzioni per inserire questo viewer sul tuo sito web</p>
+                </div>
+            </div>
+
+            <div class="space-y-4 text-sm text-slate-300">
+                <p>Per fare in modo che il libro carichi automaticamente il PDF situato nella repository del tuo sito web, modifica la variabile <code class="bg-slate-800 text-indigo-300 px-2 py-0.5 rounded border border-slate-700">DEFAULT_PDF_URL</code> all'interno del codice JavaScript:</p>
+
+                <div class="bg-slate-950 p-3 rounded-lg border border-slate-800 font-mono text-xs text-slate-200 overflow-x-auto">
+                    <span class="text-slate-500">// Nel blocco script in fondo alla pagina:</span><br>
+                    <span class="text-purple-400">const</span> <span class="text-blue-400">DEFAULT_PDF_URL</span> = <span class="text-emerald-400">'./documenti/mio-libro.pdf'</span>;
+                </div>
+
+                <div class="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 text-xs text-amber-200 flex items-start gap-2.5">
+                    <i class="fa-solid fa-triangle-exclamation text-amber-400 mt-0.5"></i>
+                    <div>
+                        <strong>Nota importante per i Server Web:</strong> Assicurati che il percorso del file PDF sia relativo alla pagina HTML o assoluto (es. <code class="text-amber-100">/assets/pdf/libro.pdf</code>). Il server deve consentire l'accesso HTTP GET al file.
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-6 flex justify-end">
+                <button id="btn-understand" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-medium transition">
+                    Ho capito
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-800 text-white px-4 py-2.5 rounded-xl shadow-2xl border border-slate-700 flex items-center gap-2 z-50 opacity-0 pointer-events-none transition-all duration-300 text-sm">
+        <i id="toast-icon" class="fa-solid fa-circle-info text-indigo-400"></i>
+        <span id="toast-msg">Notifica</span>
+    </div>
+
+    <script>
+        // Configurazione PDF.js Worker
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+        /* 
+         * CONFIGURAZIONE PER IL TUO SITO:
+         * Sostituisci questo URL con il percorso relativo o assoluto del tuo file PDF presente nella repository.
+         * Esempio: './docs/mio-libro.pdf' oppure '/assets/catalogo.pdf'
+         */
+        const DEFAULT_PDF_URL = 'test.pdf';
+
+        // Stato dell'applicazione
+        let pageFlipApp = null;
+        let pdfDoc = null;
+        let totalPagesCount = 0;
+        let soundEnabled = true;
+        let isRendering = false;
+        let audioCtx = null;
+
+        // Elementi DOM
+        const flipbookEl = document.getElementById('flipbook');
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const loadingBar = document.getElementById('loading-bar');
+        const loadingPercent = document.getElementById('loading-percent');
+        const loadingText = document.getElementById('loading-text');
+        const emptyState = document.getElementById('empty-state');
+        const docTitle = document.getElementById('doc-title');
+        const docStatus = document.getElementById('doc-status');
+        const pageInput = document.getElementById('page-input');
+        const totalPagesEl = document.getElementById('total-pages');
+        const thumbsDrawer = document.getElementById('thumbs-drawer');
+        const thumbsContainer = document.getElementById('thumbs-container');
+
+        // Sintesi del suono di sfoglio carta tramite Web Audio API (Senza file audio esterni)
+        function playFlipSound() {
+            if (!soundEnabled) return;
+            try {
+                if (!audioCtx) {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+
+                // Generatore di rumore rosa/bianco per simulare lo sfregamento della carta
+                const bufferSize = audioCtx.sampleRate * 0.15; // 150ms
+                const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    data[i] = Math.random() * 2 - 1;
+                }
+
+                const noise = audioCtx.createBufferSource();
+                noise.buffer = buffer;
+
+                const filter = audioCtx.createBiquadFilter();
+                filter.type = 'bandpass';
+                filter.frequency.value = 1200;
+                filter.Q.value = 1.2;
+
+                const gain = audioCtx.createGain();
+                gain.gain.setValueAtTime(0.01, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.2, audioCtx.currentTime + 0.03);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.14);
+
+                noise.connect(filter);
+                filter.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                noise.start();
+            } catch (e) {
+                console.warn('Audio non supportato o bloccato:', e);
+            }
+        }
+
+        function showToast(message, iconClass = 'fa-solid fa-circle-info text-indigo-400') {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toast-msg');
+            const toastIcon = document.getElementById('toast-icon');
+
+            toastMsg.textContent = message;
+            toastIcon.className = iconClass;
+
+            toast.classList.remove('opacity-0', 'pointer-events-none');
+            toast.classList.add('opacity-100');
+
+            setTimeout(() => {
+                toast.classList.remove('opacity-100');
+                toast.classList.add('opacity-0', 'pointer-events-none');
+            }, 3000);
+        }
+
+        async function loadPDF(pdfDataSource, isFileName = "Documento.pdf") {
+            try {
+                showLoading(true, "Apertura file PDF...", 10);
+                emptyState.classList.add('hidden');
+                flipbookEl.innerHTML = '';
+                thumbsContainer.innerHTML = '';
+
+                if (pageFlipApp) {
+                    pageFlipApp.destroy();
+                    pageFlipApp = null;
+                }
+
+                // Inizializza il documento PDF via PDF.js
+                const loadingTask = pdfjsLib.getDocument(pdfDataSource);
+                
+                loadingTask.onProgress = function(progress) {
+                    if (progress.total > 0) {
+                        const percent = Math.round((progress.loaded / progress.total) * 40);
+                        updateLoadingProgress(percent, "Download documento...");
+                    }
+                };
+
+                pdfDoc = await loadingTask.promise;
+                totalPagesCount = pdfDoc.numPages;
+
+                totalPagesEl.textContent = totalPagesCount;
+                pageInput.max = totalPagesCount;
+                docTitle.textContent = isFileName;
+                docStatus.textContent = `${totalPagesCount} Pagine totali`;
+
+                updateLoadingProgress(45, "Generazione pagine libro...");
+
+                // Determinazione dimensioni base pagina
+                const firstPage = await pdfDoc.getPage(1);
+                const viewport = firstPage.getViewport({ scale: 1.5 });
+                const pageWidth = Math.round(viewport.width);
+                const pageHeight = Math.round(viewport.height);
+
+                // Rendering di ciascuna pagina in un elemento DOM
+                const pageElements = [];
+
+                for (let pageNum = 1; pageNum <= totalPagesCount; pageNum++) {
+                    const percent = 45 + Math.round((pageNum / totalPagesCount) * 45);
+                    updateLoadingProgress(percent, `Elaborazione pagina ${pageNum} di ${totalPagesCount}...`);
+
+                    const page = await pdfDoc.getPage(pageNum);
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+
+                    // Risoluzione per schermi ad alta densità (Retina display / HD)
+                    const renderScale = 1.5;
+                    const pageViewport = page.getViewport({ scale: renderScale });
+
+                    canvas.width = pageViewport.width;
+                    canvas.height = pageViewport.height;
+
+                    await page.render({
+                        canvasContext: ctx,
+                        viewport: pageViewport
+                    }).promise;
+
+                    // Contenitore Pagina Flipbook
+                    const pageDiv = document.createElement('div');
+                    pageDiv.className = `page ${pageNum % 2 === 0 ? 'page-left' : 'page-right'}`;
+
+                    const contentDiv = document.createElement('div');
+                    contentDiv.className = 'page-content';
+
+                    // Convertiamo il canvas renderizzato in un'immagine per performance ottimali
+                    const img = document.createElement('img');
+                    img.src = canvas.toDataURL('image/jpeg', 0.9);
+                    img.style.width = '100%';
+                    img.style.height = '100%';
+                    img.style.objectFit = 'contain';
+
+                    contentDiv.appendChild(img);
+
+                    const pageNumSpan = document.createElement('span');
+                    pageNumSpan.className = 'page-number';
+                    pageNumSpan.textContent = pageNum;
+                    contentDiv.appendChild(pageNumSpan);
+
+                    pageDiv.appendChild(contentDiv);
+                    flipbookEl.appendChild(pageDiv);
+                    pageElements.push(pageDiv);
+
+                    // Crea anche la miniatura nella barra laterale
+                    createThumbnail(pageNum, canvas.toDataURL('image/jpeg', 0.4));
+                }
+
+                updateLoadingProgress(95, "Inizializzazione effetto sfoglio...");
+
+                // Configura StPageFlip
+                const isMobile = window.innerWidth < 768;
+                pageFlipApp = new St.PageFlip(flipbookEl, {
+                    width: Math.min(pageWidth / 1.5, 550),
+                    height: Math.min(pageHeight / 1.5, 733),
+                    size: "stretch",
+                    minWidth: 280,
+                    maxWidth: 900,
+                    minHeight: 380,
+                    maxHeight: 1200,
+                    maxShadowOpacity: 0.5,
+                    showCover: true,
+                    mobileScrollSupport: false,
+                    usePortrait: isMobile
+                });
+
+                pageFlipApp.loadFromHTML(document.querySelectorAll('.page'));
+
+                // Event listener cambio pagina StPageFlip
+                pageFlipApp.on('flip', (e) => {
+                    const currentPage = e.data + 1;
+                    pageInput.value = currentPage;
+                    playFlipSound();
+                    highlightActiveThumbnail(currentPage);
+                });
+
+                showLoading(false);
+                showToast("Libro pronto per essere sfogliato!", "fa-solid fa-circle-check text-emerald-400");
+
+            } catch (error) {
+                console.error("Errore caricamento PDF:", error);
+                showLoading(false);
+                emptyState.classList.remove('hidden');
+                showToast("Errore durante il caricamento del PDF", "fa-solid fa-circle-exclamation text-rose-400");
+            }
+        }
+
+        function createThumbnail(pageNum, imgDataUrl) {
+            const thumbCard = document.createElement('div');
+            thumbCard.className = `group cursor-pointer rounded-lg overflow-hidden border border-slate-700 hover:border-indigo-500 transition p-1 bg-slate-800/60 text-center relative shadow`;
+            thumbCard.id = `thumb-page-${pageNum}`;
+
+            thumbCard.innerHTML = `
+                <div class="aspect-[3/4] bg-slate-900 rounded overflow-hidden flex items-center justify-center">
+                    <img src="${imgDataUrl}" class="w-full h-full object-cover group-hover:scale-105 transition duration-200" alt="Pagina ${pageNum}">
+                </div>
+                <span class="text-[11px] font-medium text-slate-400 group-hover:text-indigo-400 mt-1 block">Pag. ${pageNum}</span>
+            `;
+
+            thumbCard.addEventListener('click', () => {
+                if (pageFlipApp) {
+                    pageFlipApp.turnToPage(pageNum - 1);
+                    thumbsDrawer.classList.add('translate-x-full');
+                }
+            });
+
+            thumbsContainer.appendChild(thumbCard);
+        }
+
+        function highlightActiveThumbnail(pageNum) {
+            document.querySelectorAll('#thumbs-container > div').forEach(el => {
+                el.classList.remove('ring-2', 'ring-indigo-500', 'border-indigo-500');
+            });
+            const activeThumb = document.getElementById(`thumb-page-${pageNum}`);
+            if (activeThumb) {
+                activeThumb.classList.add('ring-2', 'ring-indigo-500', 'border-indigo-500');
+                activeThumb.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        }
+
+        // Helper caricamento
+        function showLoading(show, text = "", percent = 0) {
+            if (show) {
+                loadingOverlay.classList.remove('opacity-0', 'pointer-events-none');
+                updateLoadingProgress(percent, text);
+            } else {
+                loadingOverlay.classList.add('opacity-0', 'pointer-events-none');
+            }
+        }
+
+        function updateLoadingProgress(percent, text) {
+            if (text) loadingText.textContent = text;
+            loadingBar.style.width = `${percent}%`;
+            loadingPercent.textContent = `${percent}%`;
+        }
+
+        // Assegnazione Pulsanti di Navigazione
+        document.getElementById('btn-prev').addEventListener('click', () => pageFlipApp?.flipPrev());
+        document.getElementById('btn-next').addEventListener('click', () => pageFlipApp?.flipNext());
+        document.getElementById('btn-first').addEventListener('click', () => pageFlipApp?.turnToPage(0));
+        document.getElementById('btn-last').addEventListener('click', () => pageFlipApp?.turnToPage(totalPagesCount - 1));
+
+        // Input diretto del numero pagina
+        pageInput.addEventListener('change', (e) => {
+            let val = parseInt(e.target.value);
+            if (isNaN(val)) val = 1;
+            if (val < 1) val = 1;
+            if (val > totalPagesCount) val = totalPagesCount;
+            pageFlipApp?.turnToPage(val - 1);
+        });
+
+        // Toggle Audio
+        const btnSound = document.getElementById('btn-sound');
+        btnSound.addEventListener('click', () => {
+            soundEnabled = !soundEnabled;
+            btnSound.innerHTML = soundEnabled 
+                ? '<i class="fa-solid fa-volume-high"></i>' 
+                : '<i class="fa-solid fa-volume-xmark text-slate-500"></i>';
+            showToast(soundEnabled ? "Audio sfoglio attivato" : "Audio sfoglio disattivato");
+        });
+
+        // Toggle Miniature Drawer
+        const btnThumbs = document.getElementById('btn-thumbs');
+        const btnCloseThumbs = document.getElementById('btn-close-thumbs');
+        btnThumbs.addEventListener('click', () => thumbsDrawer.classList.toggle('translate-x-full'));
+        btnCloseThumbs.addEventListener('click', () => thumbsDrawer.classList.add('translate-x-full'));
+
+        // Toggle Modal Configurazione
+        const configModal = document.getElementById('config-modal');
+        document.getElementById('btn-config').addEventListener('click', () => configModal.classList.remove('hidden'));
+        document.getElementById('btn-close-config').addEventListener('click', () => configModal.classList.add('hidden'));
+        document.getElementById('btn-understand').addEventListener('click', () => configModal.classList.add('hidden'));
+
+        // Gestione Caricamento File Locale (Test)
+        function handleFileInput(e) {
+            const file = e.target.files[0];
+            if (file && file.type === 'application/pdf') {
+                const fileReader = new FileReader();
+                fileReader.onload = function() {
+                    const typedarray = new Uint8Array(this.result);
+                    loadPDF(typedarray, file.name);
+                };
+                fileReader.readAsArrayBuffer(file);
+            } else {
+                showToast("Seleziona un file PDF valido", "fa-solid fa-circle-exclamation text-amber-400");
+            }
+        }
+
+        document.getElementById('file-input').addEventListener('change', handleFileInput);
+        document.getElementById('empty-file-input').addEventListener('change', handleFileInput);
+
+        // Toggle Schermo Intero
+        document.getElementById('btn-fullscreen').addEventListener('click', () => {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => {
+                    showToast("Schermo intero non supportato dal browser");
+                });
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+            }
+        });
+
+        // Tasti di scorciatoia da tastiera
+        window.addEventListener('keydown', (e) => {
+            if (e.target.tagName === 'INPUT') return;
+            if (e.key === 'ArrowLeft') pageFlipApp?.flipPrev();
+            if (e.key === 'ArrowRight') pageFlipApp?.flipNext();
+            if (e.key === 'Home') pageFlipApp?.turnToPage(0);
+            if (e.key === 'End') pageFlipApp?.turnToPage(totalPagesCount - 1);
+        });
+
+        // Adaptability / Window Resize handler
+        window.addEventListener('resize', () => {
+            if (pageFlipApp) {
+                const isMobile = window.innerWidth < 768;
+                pageFlipApp.updateFromHtml(document.querySelectorAll('.page'));
+            }
+        });
+
+        window.addEventListener('DOMContentLoaded', () => {
+            // Tentativo di caricare il PDF di default dalla repository del sito
+            loadPDF(DEFAULT_PDF_URL, "Guida PDF Repository");
+        });
+    </script>
+</body>
+</html>
