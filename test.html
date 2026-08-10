@@ -20,18 +20,23 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
-        body {
+        html, body {
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+            position: fixed;
+            touch-action: none;
+            -webkit-user-select: none;
+            user-select: none;
             font-family: 'Inter', sans-serif;
             background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
             color: #f8fafc;
-            user-select: none;
-            overflow-x: hidden;
         }
 
         /* Container StPageFlip custom fixes */
         .flipbook-viewport {
-            width: 100%;
-            height: calc(100vh - 80px);
+            width: 100vw;
+            height: calc(100vh - 64px);
             display: flex;
             justify-content: center;
             align-items: center;
@@ -39,11 +44,13 @@
             overflow: hidden;
             touch-action: none;
             overscroll-behavior: none;
+            padding: 8px;
+            box-sizing: border-box;
         }
 
         .flipbook-container {
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
-            transition: transform 0.3s ease;
+            box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.8);
+            transition: transform 0.2s ease;
             margin: auto;
             touch-action: none;
         }
@@ -53,7 +60,7 @@
             background-color: #ffffff;
             overflow: hidden;
             box-sizing: border-box;
-            box-shadow: inset 0 0 15px rgba(0,0,0,0.1);
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.08);
         }
 
         .page-content {
@@ -64,28 +71,52 @@
             justify-content: center;
             align-items: center;
             position: relative;
-            padding: 12px 12px 28px 12px;
+            padding: 0;
             box-sizing: border-box;
         }
 
         .page-content img {
-            max-width: 100%;
-            max-height: 100%;
-            width: auto;
-            height: auto;
+            width: 100%;
+            height: 100%;
             object-fit: contain;
+            display: block;
         }
 
         .page-number {
             position: absolute;
-            bottom: 6px;
+            bottom: 8px;
             font-size: 11px;
-            color: #64748b;
-            font-weight: 500;
+            color: #475569;
+            font-weight: 600;
+            background: rgba(255, 255, 255, 0.85);
+            padding: 1px 7px;
+            border-radius: 9999px;
+            pointer-events: none;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+            border: 1px solid rgba(226, 232, 240, 0.8);
         }
 
-        .page-left .page-number { left: 15px; }
-        .page-right .page-number { right: 15px; }
+        .page-left .page-number { left: 12px; }
+        .page-right .page-number { right: 12px; }
+
+        /* Custom Touch Overlay Zones for Mobile (prevent horizontal dragging shifts) */
+        .touch-zone-prev, .touch-zone-next {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 20%;
+            z-index: 15;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: transparent;
+            border: none;
+            outline: none;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+        .touch-zone-prev { left: 0; }
+        .touch-zone-next { right: 0; }
 
         /* Custom Scrollbar for Drawer */
         ::-webkit-scrollbar {
@@ -180,6 +211,10 @@
 
     <!-- Main Content Area -->
     <main class="relative flex-1 w-full flex items-center justify-center overflow-hidden">
+
+        <!-- Mobile Side Tap Zones for fast non-drag page turning -->
+        <button id="touch-prev" class="touch-zone-prev md:hidden" aria-label="Pagina Precedente"></button>
+        <button id="touch-next" class="touch-zone-next md:hidden" aria-label="Pagina Successiva"></button>
 
         <!-- Loading Overlay -->
         <div id="loading-overlay" class="absolute inset-0 bg-slate-950/80 backdrop-blur-md z-40 flex flex-col items-center justify-center transition-opacity duration-300">
@@ -387,9 +422,25 @@
                 const rawViewport = firstPage.getViewport({ scale: 1.0 });
                 const pageRatio = rawViewport.width / rawViewport.height;
 
-                // Calcolo dimensioni ottimali senza taglio dei margini
-                const baseHeight = 800;
-                const baseWidth = Math.round(baseHeight * pageRatio);
+                // Calcolo preciso dello spazio disponibile per evitare qualsiasi taglio sopra/sotto o lati
+                const isMobile = window.innerWidth < 768;
+                const headerHeight = 64;
+                const paddingV = isMobile ? 12 : 32;
+                const paddingH = isMobile ? 12 : 48;
+
+                const maxAvailHeight = Math.max(250, window.innerHeight - headerHeight - paddingV);
+                const maxAvailWidthPerPage = isMobile 
+                    ? Math.max(200, window.innerWidth - paddingH)
+                    : Math.max(200, (window.innerWidth - paddingH) / 2);
+
+                // Calcola le dimensioni ottimali senza sforare né in altezza né in larghezza
+                let calcPageWidth = maxAvailWidthPerPage;
+                let calcPageHeight = Math.round(calcPageWidth / pageRatio);
+
+                if (calcPageHeight > maxAvailHeight) {
+                    calcPageHeight = maxAvailHeight;
+                    calcPageWidth = Math.round(calcPageHeight * pageRatio);
+                }
 
                 // Rendering di ciascuna pagina in un elemento DOM
                 for (let pageNum = 1; pageNum <= totalPagesCount; pageNum++) {
@@ -398,7 +449,7 @@
 
                     const page = await pdfDoc.getPage(pageNum);
                     
-                    // Risoluzione per schermi ad alta densità (Retina display / HD)
+                    // Risoluzione elevata per nitidezza perfetta del testo
                     const renderScale = 2.0;
                     const pageViewport = page.getViewport({ scale: renderScale });
 
@@ -438,21 +489,21 @@
 
                 updateLoadingProgress(95, "Inizializzazione effetto sfoglio...");
 
-                // Configura StPageFlip
-                const isMobile = window.innerWidth < 768;
+                // Configura StPageFlip con limiti rigidi che non superano lo schermo
                 pageFlipApp = new St.PageFlip(flipbookEl, {
-                    width: baseWidth,
-                    height: baseHeight,
+                    width: calcPageWidth,
+                    height: calcPageHeight,
                     size: "stretch",
-                    minWidth: 260,
-                    maxWidth: 900,
-                    minHeight: 360,
-                    maxHeight: 1250,
-                    maxShadowOpacity: 0.4,
+                    minWidth: 160,
+                    maxWidth: calcPageWidth,
+                    minHeight: 220,
+                    maxHeight: calcPageHeight,
+                    maxShadowOpacity: 0.3,
                     showCover: true,
                     mobileScrollSupport: false,
                     usePortrait: isMobile,
-                    autoSize: true
+                    autoSize: true,
+                    clickEventForward: true
                 });
 
                 pageFlipApp.loadFromHTML(document.querySelectorAll('.page'));
@@ -532,11 +583,20 @@
             loadingPercent.textContent = `${percent}%`;
         }
 
-        // Assegnazione Pulsanti di Navigazione
+        // Pulsanti di Navigazione Principali e Zone Tattili Mobile
         document.getElementById('btn-prev').addEventListener('click', () => pageFlipApp?.flipPrev());
         document.getElementById('btn-next').addEventListener('click', () => pageFlipApp?.flipNext());
         document.getElementById('btn-first').addEventListener('click', () => pageFlipApp?.turnToPage(0));
         document.getElementById('btn-last').addEventListener('click', () => pageFlipApp?.turnToPage(totalPagesCount - 1));
+
+        document.getElementById('touch-prev').addEventListener('click', (e) => {
+            e.stopPropagation();
+            pageFlipApp?.flipPrev();
+        });
+        document.getElementById('touch-next').addEventListener('click', (e) => {
+            e.stopPropagation();
+            pageFlipApp?.flipNext();
+        });
 
         // Input diretto del numero pagina
         pageInput.addEventListener('change', (e) => {
@@ -559,11 +619,12 @@
         document.getElementById('btn-close-config').addEventListener('click', () => configModal.classList.add('hidden'));
         document.getElementById('btn-understand').addEventListener('click', () => configModal.classList.add('hidden'));
 
-        // Preveniamo il pan/scorrimento nativo indesiderato del layout durante i gesti touch su mobile
-        document.getElementById('viewport').addEventListener('touchmove', (e) => {
-            if (e.touches.length === 1) {
-                e.preventDefault();
+        // Blocco assoluto dello scorrimento nativo e dei gesti di trascinamento del layout
+        document.addEventListener('touchmove', (e) => {
+            if (e.target.closest('#thumbs-drawer') || e.target.closest('#config-modal')) {
+                return; // Consente lo scroll nella barra delle miniature o modale
             }
+            e.preventDefault();
         }, { passive: false });
 
         // Gestione Caricamento File Locale (Test)
